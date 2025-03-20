@@ -2,6 +2,7 @@ package com.gilbertdev;
 
 import com.binance.connector.client.WebSocketStreamClient;
 import com.binance.connector.client.impl.WebSocketStreamClientImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gilbertdev.model.PriceData;
 import org.slf4j.Logger;
@@ -26,10 +27,20 @@ public class PriceStream {
         logger.debug("Main subscribe chat method");
 
         webSocketStreamClient.symbolTicker("btcusdt", response -> {
-            PriceData priceData = objectMapper.convertValue(response, PriceData.class);
-            String message = "Response: " + response;
-            for (String id : chatIds) {
-                bot.sendMessage(id, message);
+            try {
+                PriceData priceData = objectMapper.readValue(response, PriceData.class);
+                final double threshold = 0.3;
+
+                if (
+                        Math.abs(Double.parseDouble(priceData.getPriceChangePercent())) >= threshold
+                ) {
+                    String message = "Alerta bitcoin: Bitcoin cambio " + priceData.getPriceChangePercent() + "%";
+                    for (String id : chatIds) {
+                        bot.sendMessage(id, message);
+                    }
+                }
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             }
         });
     }
