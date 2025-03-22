@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.StringTokenizer;
 
 
 public class Bot extends TelegramLongPollingBot {
@@ -46,13 +47,30 @@ public class Bot extends TelegramLongPollingBot {
         Message message = update.getMessage();
         User user = message.getFrom();
 
-        if ("/subscribe".equals(message.getText())) {
-            subscribeChat(message.getChatId().toString());
-            sendMessage(message.getChatId().toString(),
-                    "¡Hola, " + user.getFirstName() + "! Te acabas de suscribir a las alertas de precio de BTC.");
+        String content = message.getText();
+        if (isCommand(content)) {
+            String[] tokens = content.split(" ");
+
+            if ("/start".equals(tokens[0])) {
+                subscribeChat(message.getChatId().toString());
+                sendMessage(message.getChatId().toString(),
+                        "¡Hola, " + user.getFirstName() + "! Te acabas de suscribir a las alertas de precio de BTC.");
+            }
+
+            if ("/help".equals(tokens[0])) {
+                sendMessage(message.getChatId().toString(), "¡En construccion!");
+            }
+
+            if ("/settings".equals(tokens[0])) {
+                sendMessage(message.getChatId().toString(), "¡En construccion!");
+            }
         }
 
         logger.debug("{} wrote {}", user.getFirstName(), message.getText());
+    }
+
+    private boolean isCommand(String message) {
+        return message.startsWith("/");
     }
 
     public void sendMessage(String chatId, String message) {
