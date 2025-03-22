@@ -10,35 +10,28 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class PriceStream {
     private static final Logger logger = LoggerFactory.getLogger(PriceStream.class);
-    private final WebSocketStreamClient webSocketStreamClient = new WebSocketStreamClientImpl();
-
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final List<String> chatIds = new ArrayList<>();
+    private final WebSocketStreamClient webSocketStreamClient = new WebSocketStreamClientImpl();
 
-    public void subscribeChat(String chatId) {
-        chatIds.add(chatId);
+    private final String pair;
+
+
+    public PriceStream(String pair) {
+        this.pair = pair;
     }
 
-    public void getPriceStreamForChat(Bot bot) {
+    public void getPriceStreamForChat(Consumer<PriceData> consumer) {
         logger.debug("Main subscribe chat method");
 
-        webSocketStreamClient.symbolTicker("btcusdt", response -> {
+        webSocketStreamClient.symbolTicker(pair, response -> {
             try {
                 PriceData priceData = objectMapper.readValue(response, PriceData.class);
-                final double threshold = 0.3;
-
-                if (
-                        Math.abs(Double.parseDouble(priceData.getPriceChangePercent())) >= threshold
-                ) {
-                    String message = "Alerta bitcoin: Bitcoin cambio " + priceData.getPriceChangePercent() + "%";
-                    for (String id : chatIds) {
-                        bot.sendMessage(id, message);
-                    }
-                }
+                consumer.accept(priceData);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }

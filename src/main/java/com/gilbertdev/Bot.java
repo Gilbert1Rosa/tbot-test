@@ -10,6 +10,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 
@@ -18,6 +20,9 @@ public class Bot extends TelegramLongPollingBot {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(Bot.class);
 
     private final PriceStream priceStream;
+    private final List<String> chatIds = new ArrayList<>();
+
+    private final double threshold = 0.3;
 
     public Bot(PriceStream priceStream) {
         if (priceStream == null) {
@@ -33,8 +38,7 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        String token = System.getenv("tbot.apikey");
-        return token;
+        return System.getenv("tbot.apikey");
     }
 
     @Override
@@ -43,7 +47,7 @@ public class Bot extends TelegramLongPollingBot {
         User user = message.getFrom();
 
         if ("/subscribe".equals(message.getText())) {
-            priceStream.subscribeChat(message.getChatId().toString());
+            subscribeChat(message.getChatId().toString());
             sendMessage(message.getChatId().toString(),
                     "¡Hola, " + user.getFirstName() + "! Te acabas de suscribir a las alertas de precio de BTC.");
         }
@@ -64,4 +68,20 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
+    public void startStream() {
+        priceStream.getPriceStreamForChat(priceData -> {
+            if (
+                    Math.abs(Double.parseDouble(priceData.getPriceChangePercent())) >= threshold
+            ) {
+                String message = "Alerta bitcoin: Bitcoin cambio " + priceData.getPriceChangePercent() + "%";
+                for (String id : chatIds) {
+                    sendMessage(id, message);
+                }
+            }
+        });
+    }
+
+    private void subscribeChat(String chatId) {
+        chatIds.add(chatId);
+    }
 }
